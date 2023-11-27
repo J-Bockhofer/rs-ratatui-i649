@@ -80,8 +80,10 @@ pub struct Home <'a>{
   command_tx: Option<UnboundedSender<Action>>,
   config: Config,
   iostreamed: StatefulList<String>,
+  precalc_list: Vec<ListItem<'a>>,
 
   available_actions: StatefulList<&'a str>, // &str is optional here but since the example in list.rs uses it, I did want to include it to show that complications with explicit lfietimes can arise quickly
+
 }
 
 impl<'a> Home<'a>{
@@ -97,6 +99,77 @@ impl<'a> Home<'a>{
     ]);
     self
   }
+
+
+  pub fn highlight_io(&'a mut self) {
+
+    let iolines: Vec<ListItem> = self
+    .iostreamed
+    .items // change stateful list to simple vector CHANGED
+    .iter()
+    .map(|i| {
+        let collected: Vec<&str> = i.split("++++").collect(); // split when multiple lines are received
+
+        let ip_re = Regex::new(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})").unwrap();
+        let ban_re: Regex = Regex::new(r"Ban").unwrap();
+        let found_re = Regex::new(r"Found").unwrap();
+        let mut line: Line = Line::default();
+        
+        for subline in collected {
+          let mut splitword: &str = "(/%&$§"; // sth super obscure as the default
+
+          let results: Vec<&str> = ip_re
+            .captures_iter(&subline)
+            .filter_map(|capture| capture.get(1).map(|m| m.as_str()))
+            .collect();
+          let cip: &str;
+          if !results.is_empty() {
+            // assume only left and right side - not multiple ips in one subline
+            // assume splitword is on left of ip --- lay out of fail2ban sshd
+            cip = results[0];
+
+            if ban_re.is_match(&subline) {splitword = "Ban";}
+            else if found_re.is_match(&subline)  {splitword = "Found";}
+            let fparts: Vec<&str> = subline.split(cip).collect();
+            let sparts: Vec<&str> = fparts[0].split(splitword).collect();
+
+            let startspan = Span::styled(sparts[0], Style::default().fg(Color::White));
+
+
+            line.spans.push(startspan);
+
+            if sparts.len() > 1 {
+              // Found or Ban
+
+              if splitword == "Found" {
+                let splitspan = Span::styled(format!("{} ",splitword), Style::default().fg(Color::LightCyan));
+                line.spans.push(splitspan);
+              }
+              else {
+                // Ban
+                let splitspan = Span::styled(format!("{} ",splitword), Style::default().fg(Color::LightYellow));
+              }
+            }
+            if fparts.len() > 1 {
+              let ipspan = Span::styled(cip, Style::default().fg(Color::LightRed));
+              line.spans.push(ipspan);
+              let endspan = Span::styled(fparts[1], Style::default().fg(Color::White));
+              line.spans.push(endspan);
+            }
+          }
+          else {
+            // result empty, meaning no ip found
+            line = Line::from(i.as_str());
+          }
+        }
+        ListItem::new(line).style(Style::default().fg(Color::White))
+    })
+    .collect();
+
+    self.precalc_list = iolines;
+
+  }
+
 }
 
 impl Component for Home<'_> {
@@ -116,6 +189,8 @@ impl Component for Home<'_> {
       },
       Action::IONotify(x) => {
         self.iostreamed.items.push(x.clone());
+        // Problem B HERE
+        self.highlight_io();
       },
       _ => {},
     }
@@ -129,63 +204,10 @@ impl Component for Home<'_> {
     .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
     .split(f.size());
 
-    // If REGEX are defined here the problem becomes much less noticable! So moving them further out would be even better.
-
-    let iolines: Vec<ListItem> = self
-    .iostreamed
-    .items
-    .iter()
-    .map(|i| {
-        // split regex logic here
-        let collected: Vec<&str> = i.split("++++").collect();
-        let mut lines: Line = Line::default();
-
-        for line in collected {
-          let mut splitword: &str = "(/%&$§"; // default splitword that shouldnt do anything
-
-          // REGEX were defined here in my scratch solution
-          let ip_re = Regex::new(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})").unwrap(); // IPv4 regex
-          let ban_re = Regex::new(r"Ban").unwrap();
-          let found_re = Regex::new(r"Found").unwrap();
-
-          let results: Vec<&str> = ip_re
-            .captures_iter(&line)
-            .filter_map(|capture| capture.get(1).map(|m| m.as_str()))
-            .collect();
-          let cip: &str;
-          if !results.is_empty() {
-            // assume only left and right side - not multiple ips in one line
-            // assume splitword is on left of ip --- layout of fail2ban sshd
-            cip = results[0];
-
-            if ban_re.is_match(&line) {splitword = "Ban";}
-            else if found_re.is_match(&line)  {splitword = "Found";}
-            let fparts: Vec<&str> = line.split(cip).collect();
-            let sparts: Vec<&str> = fparts[0].split(splitword).collect();
-
-            let startspan = Span::styled(sparts[0], Style::default().fg(Color::White));
-            lines.spans.push(startspan);
-
-            if sparts.len() > 1 {
-              // Found or Ban
-              let splitspan = Span::styled(format!("{} ",splitword), Style::default().fg(Color::LightCyan));
-              lines.spans.push(splitspan);
-            }
-            if fparts.len() > 1 {
-              let ipspan = Span::styled(cip, Style::default().fg(Color::LightRed));
-              lines.spans.push(ipspan);
-              let endspan = Span::styled(fparts[1], Style::default().fg(Color::White));
-              lines.spans.push(endspan);
-            }
-          }
-        }
-        ListItem::new(lines).style(Style::default().fg(Color::White))
-    })
-    .collect();
 
     let iolist_title = Line::from(" I/O Stream ");
     // Create a List from all list items and highlight the currently selected one
-    let iolist = List::new(iolines)
+    let iolist = List::new(self.precalc_list.clone())
         .block(Block::default()
           .borders(Borders::ALL)
           .border_style( Style::new().white())
