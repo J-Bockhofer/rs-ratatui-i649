@@ -10,6 +10,8 @@ use crate::{
   config::Config,
   mode::Mode,
   tui,
+
+  filewatchers,
 };
 
 pub struct App {
@@ -43,6 +45,23 @@ impl App {
 
   pub async fn run(&mut self) -> Result<()> {
     let (action_tx, mut action_rx) = mpsc::unbounded_channel();
+
+    let action_tx2 = action_tx.clone();
+    let action_tx3 = action_tx.clone();
+
+
+    let _filewatcher = tokio::spawn(async move  {
+        // SET UP PATH TO TEXT HERE
+        let path = String::from("/home/projects/ratatui-i649/bugexample/text.txt"); // /var/log/fail2ban.log
+
+        // "Notify-crate"-based filewatcher
+        let _resp = filewatchers::notify_change(&path, action_tx2).await.unwrap_or_else(|err| {
+          action_tx3.send(Action::Error(String::from("Bad Error!"))).unwrap();
+        });
+
+
+      });
+
 
     let mut tui = tui::Tui::new()?.tick_rate(self.tick_rate).frame_rate(self.frame_rate);
     // tui.mouse(true);

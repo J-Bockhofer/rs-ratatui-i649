@@ -11,6 +11,8 @@ pub mod mode;
 pub mod tui;
 pub mod utils;
 
+pub mod filewatchers;
+
 use clap::Parser;
 use cli::Cli;
 use color_eyre::eyre::Result;

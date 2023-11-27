@@ -16,6 +16,8 @@ pub enum Action {
   Refresh,
   Error(String),
   Help,
+
+  IONotify(String),
 }
 
 impl<'de> Deserialize<'de> for Action {
@@ -57,6 +59,10 @@ impl<'de> Deserialize<'de> for Action {
             } else {
               Err(E::custom(format!("Invalid Resize format: {}", value)))
             }
+          },
+          data if data.starts_with("IONotify(") => {
+            let notify_msg = data.trim_start_matches("IONotify(").trim_end_matches(")");
+            Ok(Action::IONotify(notify_msg.to_string()))            
           },
           _ => Err(E::custom(format!("Unknown Action variant: {}", value))),
         }
