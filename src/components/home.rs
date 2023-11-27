@@ -15,6 +15,12 @@ use crate::{
 };
 
 
+#[derive(Default, Clone)]
+struct StyledLine {
+  words: Vec<(String, Style)>,
+}
+
+
 // Code for stateful list from 
 // 
 #[derive(Default)]
@@ -80,7 +86,7 @@ pub struct Home <'a>{
   command_tx: Option<UnboundedSender<Action>>,
   config: Config,
   iostreamed: StatefulList<String>,
-  precalc_list: Vec<ListItem<'a>>,
+  precalc_list: Vec<StyledLine>,
 
   available_actions: StatefulList<&'a str>, // &str is optional here but since the example in list.rs uses it, I did want to include it to show that complications with explicit lfietimes can arise quickly
 
@@ -101,9 +107,9 @@ impl<'a> Home<'a>{
   }
 
 
-  pub fn highlight_io(&'a mut self) {
+  pub fn highlight_io(&mut self) {
 
-    let iolines: Vec<ListItem> = self
+    let iolines: Vec<StyledLine> = self
     .iostreamed
     .items // change stateful list to simple vector CHANGED
     .iter()
@@ -113,7 +119,7 @@ impl<'a> Home<'a>{
         let ip_re = Regex::new(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})").unwrap();
         let ban_re: Regex = Regex::new(r"Ban").unwrap();
         let found_re = Regex::new(r"Found").unwrap();
-        let mut line: Line = Line::default();
+        let mut thisline: StyledLine = StyledLine::default();
         
         for subline in collected {
           let mut splitword: &str = "(/%&$§"; // sth super obscure as the default
@@ -133,36 +139,31 @@ impl<'a> Home<'a>{
             let fparts: Vec<&str> = subline.split(cip).collect();
             let sparts: Vec<&str> = fparts[0].split(splitword).collect();
 
-            let startspan = Span::styled(sparts[0], Style::default().fg(Color::White));
-
-
-            line.spans.push(startspan);
+            thisline.words.push((String::from(sparts[0]), Style::default().fg(Color::White)));
 
             if sparts.len() > 1 {
               // Found or Ban
 
               if splitword == "Found" {
-                let splitspan = Span::styled(format!("{} ",splitword), Style::default().fg(Color::LightCyan));
-                line.spans.push(splitspan);
+                thisline.words.push((format!("{} ",splitword), Style::default().fg(Color::LightCyan)));
               }
               else {
                 // Ban
-                let splitspan = Span::styled(format!("{} ",splitword), Style::default().fg(Color::LightYellow));
+                thisline.words.push((format!("{} ",splitword), Style::default().fg(Color::LightYellow)));
               }
             }
             if fparts.len() > 1 {
-              let ipspan = Span::styled(cip, Style::default().fg(Color::LightRed));
-              line.spans.push(ipspan);
-              let endspan = Span::styled(fparts[1], Style::default().fg(Color::White));
-              line.spans.push(endspan);
+              thisline.words.push((String::from(cip), Style::default().fg(Color::LightRed)));
+              // words after IP
+              thisline.words.push((String::from(fparts[1]), Style::default().fg(Color::White)));
             }
           }
           else {
             // result empty, meaning no ip found
-            line = Line::from(i.as_str());
+            thisline.words.push((String::from(subline), Style::default().fg(Color::White)));
           }
         }
-        ListItem::new(line).style(Style::default().fg(Color::White))
+        thisline
     })
     .collect();
 
@@ -205,9 +206,24 @@ impl Component for Home<'_> {
     .split(f.size());
 
 
+    let iolines: Vec<ListItem> = self
+    .precalc_list
+    .iter()
+    .map(|i| {
+
+      let mut line: Line = Line::default();
+      for word in i.words.clone() {
+        let cspan = Span::styled(word.0, word.1); 
+        line.spans.push(cspan);
+      }
+      
+      ListItem::new(line)
+    })
+    .collect();
+
     let iolist_title = Line::from(" I/O Stream ");
     // Create a List from all list items and highlight the currently selected one
-    let iolist = List::new(self.precalc_list.clone())
+    let iolist = List::new(iolines)
         .block(Block::default()
           .borders(Borders::ALL)
           .border_style( Style::new().white())
