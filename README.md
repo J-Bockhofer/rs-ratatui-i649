@@ -202,7 +202,7 @@ fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
         .map(|i| {
 
           let mut line: Line = Line::default();
-          for word in i.0.words.clone() {
+          for word in i.words.clone() {
             let cspan = Span::styled(word.0, word.1); 
             line.spans.push(cspan);
           }
