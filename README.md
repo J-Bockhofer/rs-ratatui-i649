@@ -229,7 +229,7 @@ fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
 ## Considerations
 
 It would probably be good to get to a place where having explicit lifetimes is not too much of a hassle, 
-as this approach does not harness more efficient means of storing only a `&str` to the actual `String`. 
+as this approach does not harness more efficient means of storing only a `&str` compared to a `String`. 
 
 Regardless, a similar approach may be valuable for newcomers to the ratatui community.
 
