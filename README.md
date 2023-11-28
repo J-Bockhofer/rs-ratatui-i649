@@ -142,10 +142,10 @@ Given a theme as above and extending it a little, the function for styling incom
         continue;
       }
       let mut thisline: StyledLine = StyledLine::default();
-      // do word_map matching first then regex match splitting
       let words: Vec<&str> = tmp_line.split(" ").collect();
       let mut held_unstyled_words: Vec<&str> = vec![];
       for word in words.clone(){
+        // get style for word
         let mut word_style = self.apptheme.word_style_map.get_style_or_default(word.to_string()); // Detector for constant word
         if word_style == Style::default() {
           // try regex styling on word
@@ -165,7 +165,7 @@ Given a theme as above and extending it a little, the function for styling incom
             thisline.words.push((held_unstyled_words.join(" "), self.apptheme.default_text_style));
             held_unstyled_words = vec![];
           }
-          // push styled word with space in front - TODO word is in first position
+          // push styled word with space in front - TODO word is in first position and does not need a whitespace prefixed
           thisline.words.push((format!(" {}", word.to_string()), word_style));
 
         }
