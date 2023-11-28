@@ -211,15 +211,15 @@ fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
         })
         .collect();
 
-      let iolist = List::new( iolines) //self.styledio.clone()
+      let iolist = List::new( iolines)
           .block(Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::new().white())
+            .border_style(self.apptheme.border_style)
             .title("iolist_title")
           )
           .highlight_style(
               Style::default()
-                  .bg(Color::LightGreen)
+                  .bg(self.apptheme.selected_style)
                   .add_modifier(Modifier::BOLD),
           )
           .highlight_symbol(">> ");        
