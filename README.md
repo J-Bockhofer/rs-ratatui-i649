@@ -123,13 +123,13 @@ impl Default for Theme {
 
 This can of course further be improved on by implementing a hashmap for style lookup when working with more complex themeing / more keywords.
 
-Given a theme as above and extending it a little, the function for styling incoming message in case could look like this:
+Given a theme as above and extending it a little, the function for styling incoming message in this case could look like this:
 
 ```rust
 
 // in Home
 {
-    stored_styled_iostreamed: StatefulList<StyledLine>, // usize for some extra information
+    stored_styled_iostreamed: StatefulList<StyledLine>, 
 }
 
 // self is a reference to Home in this case
