@@ -217,11 +217,7 @@ fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
             .border_style(self.apptheme.border_style)
             .title("iolist_title")
           )
-          .highlight_style(
-              Style::default()
-                  .bg(self.apptheme.selected_style)
-                  .add_modifier(Modifier::BOLD),
-          )
+          .highlight_style(self.apptheme.highlight_style)
           .highlight_symbol(">> ");        
 
     f.render_stateful_widget(iolist, layout[1], &mut self.stored_styled_iostreamed.state); 
